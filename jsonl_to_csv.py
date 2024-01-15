@@ -1,8 +1,7 @@
 import json
 import csv
+import argparse
 
-
-DIR_DATA = 'data/v3'
 
 def jsonl_to_csv(jsonl_file, csv_file):
     with open(jsonl_file, 'r') as file:
@@ -17,7 +16,13 @@ def jsonl_to_csv(jsonl_file, csv_file):
                 data = json.loads(line)
                 writer.writerow(data.values())
 
-sessions_jsonl = f'{DIR_DATA}/sessions.jsonl'
-print(sessions_jsonl)
-sessions_csv = f'{DIR_DATA}/sessions.csv'
-jsonl_to_csv(sessions_jsonl, sessions_csv)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert JSONL file to CSV')
+    parser.add_argument('jsonl_file', help='Path to the input JSONL file')
+    
+    args = parser.parse_args()
+
+    jsonl_file = args.jsonl_file
+    csv_file = jsonl_file.replace('.jsonl', '.csv')
+
+    jsonl_to_csv(jsonl_file, csv_file)
