@@ -8,6 +8,9 @@ from pyspark.ml import Pipeline
 from pyspark.ml.regression import GBTRegressor
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.evaluation import RegressionEvaluator
+from pyspark.sql.functions import col
+from sklearn.metrics import ndcg_score
+import numpy as np
 
 PREDICTION_DIR = "predictions"
 MODEL_DIR = "model"
@@ -69,7 +72,7 @@ def tune(logger, train_data, validate_data):
 
     sampler = optuna.samplers.TPESampler(seed=SEED)  
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.optimize(objective, n_trials=2)
+    study.optimize(objective, n_trials=20)
 
     # Get the best hyperparameters
     best_params = study.best_params
@@ -78,17 +81,6 @@ def tune(logger, train_data, validate_data):
     # Display the optimization results as a DataFrame
     trials_df = study.trials_dataframe()
     print(trials_df)
-
-    # Plot the optimization history
-    fig = optuna.visualization.plot_optimization_history(study)
-    fig.savefig("opt_history.png")
-    plt.close(fig)
-
-    # Plot the slice plot of the hyperparameters
-    fig = optuna.visualization.plot_slice(study)
-    fig.savefig("opt_history.png")
-    plt.close(fig)
-
 
     with open('best_params.json', 'w') as json_file:
         json.dump(best_params, json_file)
@@ -102,6 +94,7 @@ def train(logger, train_data, test_data, best_params):
         outputCol="features",
         )
 
+    test_raw_data = test_data
     train_data = assembler.transform(train_data)
     test_data = assembler.transform(test_data)
 
@@ -138,8 +131,39 @@ def train(logger, train_data, test_data, best_params):
     predictions.write.format("json").save(f'{PREDICTION_DIR}', mode="overwrite")
     model.write().overwrite().save(MODEL_DIR)
 
+    ndcg = calc_ndcgAt20(model, test_raw_data, assembler, logger)
+    logger.info(f"NDCG@20: {ndcg}")
+
     for metric_name in metrics:
         logger.info(f"{metric_name.upper()}: {metrics[metric_name]}")
+
+
+def calc_ndcgAt20(model, data, assembler, logger):
+    unique_weeks = unique_weeks = data.select("week").distinct().collect()
+    unique_weeks = [item for sublist in unique_weeks for item in sublist]
+    logger.info(unique_weeks)
+    ndcgs = []
+
+    for week in unique_weeks:
+        test_week = data.filter(data["week"] == week)
+        test_week = assembler.transform(test_week)
+
+        predictions = model.transform(test_week)
+
+        sorted_predictions = predictions.orderBy(col("predicted_play_count").desc())
+        ground_truth = sorted_predictions.select("play_count").rdd.flatMap(lambda x: x).collect()
+        predicted = sorted_predictions.select("predicted_play_count").rdd.flatMap(lambda x: x).collect()
+
+        ground_truth = np.array(ground_truth).reshape(1, -1)
+        predicted = np.array(predicted).reshape(1, -1)
+
+        logger.info(ground_truth)
+        logger.info(predicted)
+
+        ndcgs.append(ndcg_score(ground_truth, predicted, k=20))
+
+    ndcg = np.mean(ndcgs)
+    return ndcg
 
 
 def main(TUNING):
@@ -149,7 +173,7 @@ def main(TUNING):
 
     train_data = data.filter(data['week'] <= 94)
     validate_data = data.filter(data['week'].isin(95, 125))
-    test_data = data.filter(data['week'] > 125)
+    test_data = data.filter(data['week'].isin(126, 157))
 
     best_params = {}
 
