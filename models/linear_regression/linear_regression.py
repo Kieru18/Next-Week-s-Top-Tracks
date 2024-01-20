@@ -1,3 +1,4 @@
+import json
 from pyspark.sql import SparkSession
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
@@ -10,15 +11,14 @@ import numpy as np
 PREDICTION_DIR = "predictions"
 MODEL_DIR = "model"
 DATA_DIR = "../../data/preprocessed_data.csv"
+FEATURES = ['lag_like_count', 'lag_skip_count', 'lag_playtime_ratio', 
+                'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5', 'popularity', 'release_date',
+                'duration_ms', 'danceability', 'acousticness', 'instrumentalness']
+TARGET = ['play_count']
 
 def main():
     spark: SparkSession = (SparkSession.builder.appName("Linear Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("Linear Regression Training")
- 
-    FEATURES = ['lag_like_count', 'lag_skip_count', 'lag_playtime_ratio', 
-                'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5', 'popularity', 'release_date',
-                'duration_ms', 'danceability', 'acousticness', 'instrumentalness']
-    TARGET = ['play_count']
 
     data = spark.read.csv(DATA_DIR, header=True, inferSchema=True)
 
@@ -26,21 +26,7 @@ def main():
     test_raw_data = data.filter(data['week'].isin(126, 157))
 
     assembler = VectorAssembler(
-            inputCols = [
-                'lag_like_count',
-                'lag_skip_count', 
-                'lag_playtime_ratio', 
-                'lag_1', 
-                'lag_2', 
-                'lag_3', 
-                'lag_4', 
-                'lag_5', 
-                'popularity', 
-                'release_date',
-                'duration_ms', 
-                'danceability', 
-                'acousticness', 
-                'instrumentalness'],
+        inputCols = FEATURES,
         outputCol = "features",
         )
 
@@ -74,10 +60,14 @@ def main():
     model.write().overwrite().save(MODEL_DIR)
 
     ndcg = calc_ndcgAt20(model, test_raw_data, assembler, logger)
+    metrics["ndcg@20"] = ndcg
     logger.info(f"NDCG@20: {ndcg}")
 
     for metric_name in metrics:
         logger.info(f"{metric_name.upper()}: {metrics[metric_name]}")
+
+    with open('metrics.json', 'w') as json_file:
+        json.dump(metrics, json_file)
 
     spark.stop()
 

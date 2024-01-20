@@ -132,10 +132,14 @@ def train(logger, train_data, test_data, best_params):
     model.write().overwrite().save(MODEL_DIR)
 
     ndcg = calc_ndcgAt20(model, test_raw_data, assembler, logger)
+    metrics["ndcg@20"] = ndcg
     logger.info(f"NDCG@20: {ndcg}")
 
     for metric_name in metrics:
         logger.info(f"{metric_name.upper()}: {metrics[metric_name]}")
+
+    with open('metrics.json', 'w') as json_file:
+        json.dump(metrics, json_file)
 
 
 def calc_ndcgAt20(model, data, assembler, logger):
