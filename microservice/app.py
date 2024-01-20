@@ -7,13 +7,14 @@ from pathlib import Path
 import json
 
 BASIC_MODEL_DIR = "../models/linear_regression/model"
-ADVANCED_MODEL_DIR = "../models/gradient_boosting/model"
+ADVANCED_MODEL_DIR = "../models/gbt_regression/model"
 DATA_FILE = "../data/preprocessed_data.csv"
 DATA_DIR = "../data"
 DATA_VER = "v3"
+DATA_START_TIME = "2020-12-28"
 
 def getWeek(date: str):
-    start_date = datetime.strptime('2020-12-28', '%Y-%m-%d')
+    start_date = datetime.strptime(DATA_START_TIME, '%Y-%m-%d')
     date = datetime.strptime(date, '%Y-%m-%d')
     week = (date - start_date).days // 7 + 1
     return week

@@ -18,7 +18,7 @@ FEATURES = ['lag_like_count', 'lag_skip_count', 'lag_playtime_ratio',
             'duration_ms', 'danceability', 'acousticness', 'instrumentalness']
 
 TARGET = ['play_count']
-
+TUNING = False
 SEED = 1410
 
 
@@ -142,7 +142,7 @@ def train(logger, train_data, test_data, best_params):
         logger.info(f"{metric_name.upper()}: {metrics[metric_name]}")
 
 
-def main(tuning):
+def main(TUNING):
     spark: SparkSession = (SparkSession.builder.appName("GBT Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("GBT Regression Training")
     data = spark.read.csv(DATA_DIR, header=True, inferSchema=True)
@@ -153,7 +153,7 @@ def main(tuning):
 
     best_params = {}
 
-    if not tuning:
+    if not TUNING:
         if os.path.exists('best_params.json'):
             with open('best_params.json', 'r') as json_file:
                 best_params = json.load(json_file)
@@ -169,6 +169,4 @@ def main(tuning):
 
 
 if __name__ == "__main__":
-    tuning = True  # set true for hyperparams tuning 
-
-    main(tuning)
+    main(TUNING)
