@@ -12,6 +12,8 @@ TRACK_FEATURES = ['track_id', 'popularity', 'duration_ms', 'explicit', 'danceabi
                   'energy', 'key', 'loudness', 'speechiness', 'acousticness', 
                   'instrumentalness', 'liveness', 'valence', 'tempo', 'release_date']
 
+WEEKS = 157
+
 
 def load_data():
     sessions = pd.read_csv(f'{DIR_DATA}/sessions.csv')
@@ -35,7 +37,7 @@ def get_merged_sessions_df(sessions, tracks):
     sessions_df['week'] = sessions_df['week'] + 1
 
     # getting rid of the first and last week, as their data is not complete
-    sessions_df = sessions_df[sessions_df.week.isin([1, 158]) == False]
+    sessions_df = sessions_df[sessions_df.week.isin([1, WEEKS+1]) == False]
 
     merged_df = pd.merge(tracks[['track_id', 'duration_ms']], sessions_df, on='track_id', how='inner')
 
@@ -93,7 +95,6 @@ def assemble_full_data(tw_counts_df, mean_playtime, tracks):
     all_tracks = tracks['track_id'].unique()
     new_week_df = pd.DataFrame({'track_id': all_tracks[:], 'week': new_week, 'like_count': 0, 'play_count': 0, 'skip_count': 0, 'playtime_ratio': 0})
     all_counts_df = pd.concat([all_counts_df, new_week_df], ignore_index=True)
-
 
     all_counts_df['lag_skip_count'] = all_counts_df.groupby('track_id')['skip_count'].shift(1)
     all_counts_df['lag_like_count'] = all_counts_df.groupby('track_id')['like_count'].shift(1)
