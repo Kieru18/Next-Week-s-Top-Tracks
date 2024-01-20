@@ -58,7 +58,7 @@ def predict():
     
     try:
         toplist = prepare_toplist(tracks_num, week, model_type)
-        toplist = toplist.join(tracks.select("name", "id"), toplist.track_id == tracks.id, "left")
+        toplist = toplist.join(tracks.select("name", "id"), toplist.track_id == tracks.id, "left").drop("track_id")
 
         return [json.loads(track) for track in toplist.toJSON().collect()]
     except Exception as e:
