@@ -9,7 +9,7 @@ from pyspark.ml.regression import GBTRegressor
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.evaluation import RegressionEvaluator
 
-PREDICTION_DIR = "advanced_model/predictions"
+PREDICTION_DIR = "predictions"
 MODEL_DIR = "model"
 DATA_DIR = "../../data/preprocessed_data.csv"
 
@@ -67,8 +67,9 @@ def tune(logger, train_data, validate_data):
         logger.info(f"Trail: {trial}, MSE: {mse}")
         return mse
 
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=2)  # Adjust the number of trials based on your needs
+    sampler = optuna.samplers.TPESampler(seed=SEED)  
+    study = optuna.create_study(direction="minimize", sampler=sampler)
+    study.optimize(objective, n_trials=2)
 
     # Get the best hyperparameters
     best_params = study.best_params
@@ -79,12 +80,15 @@ def tune(logger, train_data, validate_data):
     print(trials_df)
 
     # Plot the optimization history
-    optuna.visualization.plot_optimization_history(study)
-    plt.savefig("opt_history.png")
+    fig = optuna.visualization.plot_optimization_history(study)
+    fig.savefig("opt_history.png")
+    plt.close(fig)
 
     # Plot the slice plot of the hyperparameters
-    optuna.visualization.plot_slice(study)
-    plt.savefig("slice_plot.png")
+    fig = optuna.visualization.plot_slice(study)
+    fig.savefig("opt_history.png")
+    plt.close(fig)
+
 
     with open('best_params.json', 'w') as json_file:
         json.dump(best_params, json_file)
@@ -141,7 +145,6 @@ def train(logger, train_data, test_data, best_params):
 def main(tuning):
     spark: SparkSession = (SparkSession.builder.appName("GBT Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("GBT Regression Training")
-    spark.sparkContext.setLogLevel("ERROR")
     data = spark.read.csv(DATA_DIR, header=True, inferSchema=True)
 
     train_data = data.filter(data['week'] <= 94)
@@ -150,25 +153,22 @@ def main(tuning):
 
     best_params = {}
 
-    if tuning:
-        best_params = tune(logger, train_data, validate_data)
-    elif os.path.exists('best_params.json'):
-        with open('best_params.json', 'r') as json_file:
-            best_params = json.load(json_file)
+    if not tuning:
+        if os.path.exists('best_params.json'):
+            with open('best_params.json', 'r') as json_file:
+                best_params = json.load(json_file)
+        else:
+            print('No saved params, model will be first tuned')
+            best_params = tune(logger, train_data, validate_data)
     else:
-        print('No saved params, module will be first tuned')
         best_params = tune(logger, train_data, validate_data)
 
-    train(data, logger, train_data, test_data, best_params)
+    train(logger, train_data, test_data, best_params)
 
     spark.stop()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python my_script.py tuning")
-        tuning = False
-
-    tuning = sys.argv[1]
+    tuning = True  # set true for hyperparams tuning 
 
     main(tuning)
