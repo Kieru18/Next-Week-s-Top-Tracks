@@ -23,6 +23,7 @@ FEATURES = ['lag_like_count', 'lag_skip_count', 'lag_playtime_ratio',
 TARGET = ['play_count']
 TUNING = False
 SEED = 1410
+np.random.seed=SEED
 
 
 def tune(logger, train_data, validate_data):
@@ -69,9 +70,8 @@ def tune(logger, train_data, validate_data):
 
         logger.info(f"Trail: {trial}, MSE: {mse}")
         return mse
-
-    sampler = optuna.samplers.TPESampler(seed=SEED)  
-    study = optuna.create_study(direction="minimize", sampler=sampler)
+ 
+    study = optuna.create_study(direction="minimize")
     study.optimize(objective, n_trials=20)
 
     # Get the best hyperparameters
@@ -173,6 +173,7 @@ def calc_ndcgAt20(model, data, assembler, logger):
 def main(TUNING):
     spark: SparkSession = (SparkSession.builder.appName("GBT Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("GBT Regression Training")
+    spark.sparkContext.setLogLevel("ERROR")
     data = spark.read.csv(DATA_DIR, header=True, inferSchema=True)
 
     train_data = data.filter(data['week'] <= 94)
