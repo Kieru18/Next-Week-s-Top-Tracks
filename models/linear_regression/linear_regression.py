@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.evaluation import RegressionEvaluator
-from pyspark.mllib.evaluation import MulticlassMetrics
+#from pyspark.mllib.evaluation import MulticlassMetrics
 
 PREDICTION_DIR = "predictions"
 MODEL_DIR = "model"
@@ -11,17 +11,17 @@ DATA_DIR = "../../data/preprocessed_data.csv"
 def main():
     spark: SparkSession = (SparkSession.builder.appName("Linear Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("Linear Regression Training")
-    
+ 
     FEATURES = ['lag_like_count', 'lag_skip_count', 'lag_playtime_ratio', 
-               'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5', 'popularity', 'release_date',
-               'duration_ms', 'danceability', 'acousticness', 'instrumentalness']
+                'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5', 'popularity', 'release_date',
+                'duration_ms', 'danceability', 'acousticness', 'instrumentalness']
     TARGET = ['play_count']
 
     data = spark.read.csv(DATA_DIR, header=True, inferSchema=True)
-    
+
     train_data = data.filter(data['week'] <= 100)
     test_data = data.filter(data['week'] > 127)
-   
+
     assembler = VectorAssembler(
             inputCols = [
                 'lag_like_count',

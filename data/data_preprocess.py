@@ -1,7 +1,4 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import gc
 
 
 DIR_DATA = '../data/v3'
@@ -12,8 +9,8 @@ FEATURE_SET = ['track_id', 'week', 'lag_like_count', 'lag_skip_count', 'lag_play
                'play_count']
 
 TRACK_FEATURES = ['track_id', 'popularity', 'duration_ms', 'explicit', 'danceability', 
-                'energy', 'key', 'loudness', 'speechiness', 'acousticness', 
-                'instrumentalness', 'liveness', 'valence', 'tempo', 'release_date']
+                  'energy', 'key', 'loudness', 'speechiness', 'acousticness', 
+                  'instrumentalness', 'liveness', 'valence', 'tempo', 'release_date']
 
 
 def load_data():
