@@ -68,7 +68,7 @@ def tune(logger, train_data, validate_data):
         return mse
 
     study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=20)  # Adjust the number of trials based on your needs
+    study.optimize(objective, n_trials=2)  # Adjust the number of trials based on your needs
 
     # Get the best hyperparameters
     best_params = study.best_params
@@ -79,10 +79,12 @@ def tune(logger, train_data, validate_data):
     print(trials_df)
 
     # Plot the optimization history
-    optuna.visualization.plot_optimization_history(study).write_image("opt_history.png")
+    optuna.visualization.plot_optimization_history(study)
+    plt.savefig("opt_history.png")
 
     # Plot the slice plot of the hyperparameters
-    optuna.visualization.plot_slice(study).write_image("slice_plot.png")
+    optuna.visualization.plot_slice(study)
+    plt.savefig("slice_plot.png")
 
     with open('best_params.json', 'w') as json_file:
         json.dump(best_params, json_file)
@@ -136,7 +138,7 @@ def train(logger, train_data, test_data, best_params):
         logger.info(f"{metric_name.upper()}: {metrics[metric_name]}")
 
 
-def main(tunning):
+def main(tuning):
     spark: SparkSession = (SparkSession.builder.appName("GBT Regression Training").getOrCreate())
     logger = spark._jvm.org.apache.log4j.LogManager.getLogger("GBT Regression Training")
     spark.sparkContext.setLogLevel("ERROR")
@@ -148,7 +150,7 @@ def main(tunning):
 
     best_params = {}
 
-    if tunning:
+    if tuning:
         best_params = tune(logger, train_data, validate_data)
     elif os.path.exists('best_params.json'):
         with open('best_params.json', 'r') as json_file:
@@ -164,9 +166,9 @@ def main(tunning):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python my_script.py tunning")
-        tunning = False
+        print("Usage: python my_script.py tuning")
+        tuning = False
 
-    tunning = sys.argv[1]
+    tuning = sys.argv[1]
 
-    main(tunning)
+    main(tuning)
